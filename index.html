@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2027 寒假大阪 6 日遊</title>
+
+<!-- ============ PWA：head 區塊 ============ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFFCF6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="大阪行程">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<!-- ============ /PWA ============ -->
+
+<!-- 字型與 Tailwind -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+<style>
+/* ==================================================
+   1. 色彩與基本設定
+   ================================================== */
+:root {
+  --paper: #FFFCF6;   /* 和紙白 */
+  --ink:   #3E3A39;   /* 墨灰 */
+  --coral: #F2A497;   /* 珊瑚粉 */
+  --sun:   #F6D27A;   /* 山吹黃 */
+  --sky:   #A8D3E6;   /* 水色 */
+  --leaf:  #B9DAA5;   /* 若竹綠 */
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 64px;   /* 讓點選單跳轉時不被頂端選單蓋住 */
+}
+
+body {
+  font-family: 'Huninn', 'Noto Sans TC', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  padding-top: calc(56px + env(safe-area-inset-top, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 2px;
+}
+
+/* ==================================================
+   2. 共用元件：卡片、小標籤
+   ================================================== */
+.box {
+  border: 3px solid var(--ink);
+  border-radius: 26px;
+  background: var(--paper);
+  box-shadow: 0 5px 0 var(--ink);
+}
+
+.chip {
+  display: inline-block;
+  border: 2.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+/* 標籤顏色 */
+.c-y { background: var(--sun); }
+.c-b { background: var(--sky); }
+.c-g { background: var(--leaf); }
+.c-p { background: var(--coral); }
+.c-w { background: #fff; }
+
+/* ==================================================
+   3. 頂端選單
+   ================================================== */
+#nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  background: var(--paper);
+  border-bottom: 3px solid var(--ink);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+#nav a {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  padding: 12px 0;
+  white-space: nowrap;
+}
+
+#nav a:active { background: var(--sun); }
+
+/* ==================================================
+   4. 每日行程：日期按鈕與時間軸
+   ================================================== */
+.day {
+  flex: none;
+  min-width: 58px;
+  padding: 6px 0;
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+  transition: background .2s;
+}
+
+.day small { display: block; font-size: 11px; }
+.day.on    { background: var(--coral); animation: pop .5s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* 時間軸：左邊虛線＋圓點 */
+.tl { position: relative; padding-left: 26px; }
+
+.tl::before {
+  content: "";
+  position: absolute;
+  left: 8px; top: 6px; bottom: 6px;
+  border-left: 3px dashed var(--ink);
+}
+
+.tl li { position: relative; margin-bottom: 14px; }
+
+.tl li::before {
+  content: "";
+  position: absolute;
+  left: -26px; top: 14px;
+  width: 15px; height: 15px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--sun);
+}
+
+.tl li.air::before { background: var(--sky); }     /* 交通重點（飛機、機場線） */
+.tl li.eat::before { background: var(--coral); }   /* 吃飯 */
+
+/* ---- 景點小卡 ---- */
+.sc {
+  padding: 8px 12px 9px;
+  border: 2.5px solid var(--ink);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--ink);
+}
+.tl li.eat .sc { background: #F2A49730; }   /* 吃飯：淡粉 */
+.tl li.air .sc { background: #A8D3E640; }   /* 機場：淡藍 */
+.sc .sub { font-size: 12px; line-height: 1.5; opacity: .72; }
+.sc .chip { padding: 0 8px; font-size: 11px; line-height: 1.6; }
+
+/* ---- 路線：虛線上的圓形按鈕，點開看每一段 ---- */
+.tl li.route { margin: -8px 0 6px; }
+.tl li.route::before { content: none; }          /* 路線不要景點的圓點 */
+
+.rt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 24px;
+  padding: 0;
+  background: none;
+  font-size: 13px;
+}
+/* 左右兩段橫向虛線 = 分隔線 */
+.rt::before, .rt::after {
+  content: "";
+  flex: 1;
+  border-top: 2.5px dashed var(--ink);
+  opacity: .4;
+}
+.rt-mid {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px 6px;
+  max-width: 78%;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+  color: rgba(62, 58, 57, .55);   /* 灰色小字 */
+  transition: color .2s;
+}
+.rt:active .rt-mid, .route.open .rt-mid { color: var(--ink); }
+.rt .chip { padding: 0 7px; font-size: 10px; line-height: 1.5; }
+.rt-chev { font-size: 11px; transition: transform .25s; }
+.route.open .rt-chev { transform: rotate(180deg); }
+
+/* 展開內容（grid 0fr → 1fr 做出滑順的高度動畫） */
+.rt-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows .28s ease, visibility .28s;
+}
+.route.open .rt-body { grid-template-rows: 1fr; visibility: visible; }
+.rt-in { overflow: hidden; min-height: 0; }
+
+.rt-card {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 2.5px solid var(--ink);
+  border-radius: 18px;
+  background: #fff;
+}
+.st { padding: 8px 0; border-top: 2px dotted rgba(62, 58, 57, .4); }
+.st:first-of-type { padding-top: 0; border-top: 0; }
+.st:last-child  { padding-bottom: 0; }
+
+/* ==================================================
+   5. 勾選清單（待辦、行李共用）
+   ================================================== */
+.tick {
+  appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  border: 3px solid var(--ink);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.tick:checked        { background: var(--leaf); }
+.tick:checked::after { content: "✓"; font-size: 17px; line-height: 1; }
+.tick:checked + span { text-decoration: line-through; opacity: .55; }
+
+/* ==================================================
+   6. 美食下拉選單
+   ================================================== */
+select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  background: #fff;
+  font: inherit;
+}
+
+/* ==================================================
+   7. 動畫（最下面統一關閉減少動態效果）
+   ================================================== */
+/* 切換日期的彈跳 */
+@keyframes pop {
+  0%   { transform: scale(.9) translateY(14px); opacity: .3; }
+  100% { transform: none; opacity: 1; }
+}
+#panel.go { animation: pop .5s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* 上下輕輕浮動（飛機） */
+@keyframes float { 50% { transform: translateY(-6px); } }
+.fl  { animation: float 5s   ease-in-out infinite; }
+.fl2 { animation: float 6.5s ease-in-out infinite reverse; }
+
+/* 雲飄移 */
+@keyframes drift { to { transform: translateX(22px); } }
+.cloud { animation: drift 14s ease-in-out infinite alternate; }
+
+/* 摩天輪旋轉（transform-origin 要對準圓心） */
+@keyframes spin { to { transform: rotate(360deg); } }
+.wheel { transform-origin: 292px 118px; animation: spin 30s linear infinite; }
+
+/* 電車左右移動 */
+@keyframes ride { from { transform: translateX(-14px); } to { transform: translateX(26px); } }
+.train { animation: ride 9s ease-in-out infinite alternate; }
+
+/* 減少動態效果 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ==================================================
+     頂端固定選單
+     ================================================== -->
+<nav id="nav" class="flex" aria-label="主選單">
+  <a href="#home">首頁</a>
+  <a href="#flight">航班</a>
+  <a href="#plan">行程</a>
+  <a href="#todo">待辦</a>
+  <a href="#bag">行李</a>
+  <a href="#stay">住宿</a>
+  <a href="#food">美食</a>
+</nav>
+
+<main class="max-w-md mx-auto px-4 pb-16">
+
+
+<!-- ==================================================
+     首頁：插圖＋標題＋倒數
+     ================================================== -->
+<section id="home" class="pt-5">
+
+  <div class="box overflow-hidden" style="background: var(--sky)">
+    <svg viewBox="0 0 360 210" class="block w-full" role="img" aria-label="大阪城、天保山摩天輪與南海電車的插圖">
+
+      <!-- 太陽 -->
+      <circle cx="70" cy="52" r="26" fill="#F2A497" stroke="#3E3A39" stroke-width="3"/>
+
+      <!-- 雲 -->
+      <g class="cloud">
+        <path d="M150 50h70a14 14 0 0 0 0-28 18 18 0 0 0-34-4 16 16 0 0 0-36 10 11 11 0 0 0 0 22z"
+              fill="#fff" stroke="#3E3A39" stroke-width="3"/>
+      </g>
+
+      <!-- 飛機 -->
+      <g class="fl">
+        <path d="M236 34l44-8 10-12 6 2-5 11 14 3-1 5-16 1-9 12-6-2 4-11z"
+              fill="#FFFCF6" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+
+      <!-- 摩天輪（天保山） -->
+      <g class="wheel">
+        <circle cx="292" cy="118" r="46" fill="none" stroke="#3E3A39" stroke-width="3"/>
+        <path d="M292 72v92M246 118h92M259 85l66 66M325 85l-66 66" stroke="#3E3A39" stroke-width="2.5"/>
+        <g fill="#F6D27A" stroke="#3E3A39" stroke-width="2.5">
+          <circle cx="292" cy="72"  r="6"/>
+          <circle cx="292" cy="164" r="6" fill="#F2A497"/>
+          <circle cx="246" cy="118" r="6" fill="#B9DAA5"/>
+          <circle cx="338" cy="118" r="6"/>
+          <circle cx="259" cy="85"  r="6" fill="#B9DAA5"/>
+          <circle cx="325" cy="151" r="6"/>
+          <circle cx="325" cy="85"  r="6" fill="#F2A497"/>
+          <circle cx="259" cy="151" r="6"/>
+        </g>
+      </g>
+      <path d="M270 190l22-72 22 72z" fill="none" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+
+      <!-- 大阪城 -->
+      <g stroke="#3E3A39" stroke-width="3" stroke-linejoin="round">
+        <path d="M30 190v-34h160v34z"  fill="#fff"/>        <!-- 石垣 -->
+        <path d="M50 156v-30h120v30z"  fill="#FFFCF6"/>     <!-- 一層 -->
+        <path d="M42 126h136l-12-14H54z" fill="#B9DAA5"/>   <!-- 屋頂 -->
+        <path d="M72 112v-24h76v24z"   fill="#FFFCF6"/>     <!-- 二層 -->
+        <path d="M62 88h96l-12-14H74z" fill="#B9DAA5"/>
+        <path d="M92 74v-18h36v18z"    fill="#FFFCF6"/>     <!-- 三層 -->
+        <path d="M84 56h52l-26-22z"    fill="#B9DAA5"/>
+        <path d="M104 34l-6-8m12 8v-12m6 12l6-8" fill="none" stroke="#F6D27A"/>  <!-- 金色裝飾 -->
+        <path d="M100 190v-20a10 10 0 0 1 20 0v20z" fill="#F6D27A"/>             <!-- 門 -->
+      </g>
+
+      <!-- 地面 -->
+      <path d="M0 190h360v20H0z" fill="#B9DAA5" stroke="#3E3A39" stroke-width="3"/>
+
+      <!-- 電車 -->
+      <g class="train" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round">
+        <path d="M120 200v-14a8 8 0 0 1 8-8h76c16 0 26 9 30 22z" fill="#F6D27A"/>
+        <rect x="136" y="184" width="14" height="9" rx="3" fill="#fff"/>
+        <rect x="158" y="184" width="14" height="9" rx="3" fill="#fff"/>
+        <rect x="180" y="184" width="14" height="9" rx="3" fill="#fff"/>
+        <circle cx="140" cy="203" r="5" fill="#fff"/>
+        <circle cx="212" cy="203" r="5" fill="#fff"/>
+      </g>
+    </svg>
+  </div>
+
+  <h1 class="text-3xl mt-6 text-center leading-snug">人生沒有劇本 有時會在日本</h1>
+  <p class="text-center mt-1 text-sm">2027.01.15 – 01.20 ・ 大阪、京都、奈良</p>
+
+  <!-- 倒數（邏輯在下方 script 的「倒數」區） -->
+  <div class="box mt-4 p-4 text-center" style="background: var(--sun)" aria-live="polite">
+    <div class="text-sm">距離出發還有</div>
+    <div id="cd" class="text-4xl my-1">--</div>
+    <div id="cd2" class="text-sm"></div>
+  </div>
+
+</section>
+
+
+<!-- ==================================================
+     航班（機票已訂）
+     ================================================== -->
+<section id="flight" class="pt-10">
+  <h2 class="text-2xl mb-3">航班</h2>
+
+  <div class="grid gap-4">
+
+    <!-- 去程 -->
+    <article class="box p-4">
+      <div class="flex justify-between items-center">
+        <span class="chip c-b">去程 ✈️ 1/15 五</span>
+        <!--<span class="chip c-g">已訂</span>-->
+      </div>
+      <div class="flex items-center justify-between mt-3 text-center">
+        <div>
+          <div class="text-3xl">07:05</div>
+          <div class="text-sm">高雄小港</div>
+        </div>
+        <svg viewBox="0 0 80 24" class="w-20 fl">
+          <path d="M2 12h60" stroke="#3E3A39" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+          <path d="M62 5l16 7-16 7 3-7z" fill="#F6D27A" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="text-3xl">10:55</div>
+          <div class="text-sm">關西機場</div>
+        </div>
+      </div>
+      <p class="text-sm mt-3">04:00 到小港機場</p>
+    </article>
+
+    <!-- 回程 -->
+    <article class="box p-4">
+      <div class="flex justify-between items-center">
+        <span class="chip c-g">回程 ✈️ 1/20 三</span>
+        <!--<span class="chip c-g">已訂</span>-->
+      </div>
+      <div class="flex items-center justify-between mt-3 text-center">
+        <div>
+          <div class="text-3xl">20:20</div>
+          <div class="text-sm">關西機場</div>
+        </div>
+        <svg viewBox="0 0 80 24" class="w-20 fl2">
+          <path d="M2 12h60" stroke="#3E3A39" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
+          <path d="M62 5l16 7-16 7 3-7z" fill="#A8D3E6" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="text-3xl">22:55</div>
+          <div class="text-sm">高雄小港</div>
+        </div>
+      </div>
+      <p class="text-sm mt-3">16:10 飯店出發，先買 Rapi:t 票（16:37 發車）</p>
+    </article>
+
+  </div>
+</section>
+
+
+<!-- ==================================================
+     每日行程（內容由 script 的 DAYS 產生）
+     ================================================== -->
+<section id="plan" class="pt-10">
+  <h2 class="text-2xl mb-3">每日行程</h2>
+  <div id="days" class="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4" role="tablist"></div>
+  <div id="panel" class="box p-4 mt-2" role="tabpanel"></div>
+</section>
+
+
+<!-- ==================================================
+     出發前待辦（內容由 script 的 TODO 產生）
+     ================================================== -->
+<section id="todo" class="pt-10">
+  <h2 class="text-2xl mb-3">出發前待辦</h2>
+  <ul id="todos" class="box p-4 grid gap-3"></ul>
+</section>
+
+
+<!-- ==================================================
+     行李清單（內容由 script 的 LUGGAGE 產生）
+     ================================================== -->
+<section id="bag" class="pt-10">
+  <h2 class="text-2xl mb-3">行李清單</h2>
+  <div class="box p-4">
+    <div id="bagProgress" class="chip c-y mb-3"></div>
+    <div id="bagList" class="grid gap-5"></div>
+  </div>
+</section>
+
+
+<!-- ==================================================
+     住宿
+     ================================================== -->
+<section id="stay" class="pt-10">
+  <h2 class="text-2xl mb-3">住宿</h2>
+
+  <article class="box p-4" style="background: var(--leaf)">
+    <svg viewBox="0 0 120 56" class="w-24 fl mb-2" aria-hidden="true">
+      <path d="M8 52V22l22-14 22 14v30z" fill="#FFFCF6" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M52 52V30h30l8-10 8 10h14v22z" fill="#F6D27A" stroke="#3E3A39" stroke-width="3" stroke-linejoin="round"/>
+      <rect x="22" y="30" width="16" height="22" rx="3" fill="#A8D3E6" stroke="#3E3A39" stroke-width="3"/>
+    </svg>
+
+    <h3 class="text-lg">ESLEAD HOTEL NAMBA SOUTH Ⅲ</h3>
+    <p class="text-sm mt-1">已訂 ・ 1/15 – 1/20 ・ 住宿費 ¥96,491</p>
+
+    <a class="chip c-w mt-3"
+       href="https://maps.app.goo.gl/ZZHKHr73VE8qRwFaA"
+       target="_blank" rel="noopener">在地圖開啟</a>
+  </article>
+</section>
+
+
+<!-- ==================================================
+     美食（下拉選區域 → 顯示店家卡片）
+     ================================================== -->
+<section id="food" class="pt-10">
+  <h2 class="text-2xl mb-3">美食</h2>
+  <label class="sr-only" for="area">選擇區域</label>
+  <select id="area"></select>
+  <div id="foodList" class="grid gap-3 mt-4"></div>
+</section>
+
+<footer class="text-center text-xs mt-12 opacity-70">
+  いってらっしゃい ・ 出發前先在有網路時開一次，之後可離線使用
+</footer>
+
+</main>
+
+
+<script>
+/* ==================================================
+   A. 資料區（要改內容就改這一區）
+   ================================================== */
+
+/* ---------- A1. 每日行程 ----------
+   stops 只放「地點」（景點、機場、飯店、餐廳…），沒有的欄位直接省略：
+     time   時間（例如 '09:00'）
+     place  地點
+     note   備註
+     status 預約狀態：'已訂' 或 '還沒'
+     kind   時間軸圓點顏色：'air' 藍（機場）/ 'eat' 粉（吃飯）
+     route  「從上一個地點過來」的交通，會變成虛線上的按鈕，點開看每一段。
+            同一區走路就寫一段步行，完全不用交代就省略。
+            route 是一個陣列，每一段（step）可以有：
+              from / to  起訖站
+              tags       標籤，格式 '顏色:文字'（顏色：y 黃 / b 藍 / g 綠 / p 粉 / w 白）
+              time       出發時間
+              note       備註（下一班、轉乘…）
+              cost       費用，寫數字（例如 240），收合時會自動加總
+              status     '已訂' 或 '還沒'
+*/
+const WALK = 'w:🐾 步行';
+const CAR  = 'w:🚗 老爸載 / Uber';
+
+const DAYS = [
+
+  /* ---------- Day 1 ---------- */
+  { date: '1/15', weekday: '五', title: '抵達大阪', stops: [
+    { time: '03:00', place: '高雄出發！' },
+    { time: '03:25', place: '小港機場', note: '07:05 起飛', kind: 'air',
+      route: [
+        { from: '莫那家', to: '佩妮家', tags: [CAR]}, 
+        { from: '佩妮家', to: '洪淤西家', tags: [CAR] },
+        { from: '洪淤西家', to: '小港機場', tags: [CAR] }
+      ] },
+    { time: '10:55', place: '關西國際機場', kind: 'air',
+      route: [{ time: '07:05 - 10:55', from: '小港機場', to: '關西機場', tags: ['b:✈️ 飛機'], status: '已訂'}] },
+    { place: '飯店', note: 'ESLEAD HOTEL NAMBA SOUTH Ⅲ', status: '已訂',
+      route: [
+        { from: '關西機場', to: '新今宮站', tags: ['y:南海 Rapi:t'], note: '機台買乘車券+特急券，順便買 ICOCA', cost: 1380 },
+        { from: '新今宮站', to: '飯店',     tags: [WALK, 'g:南海高野線'], note: '經今宮戎', cost: 180 },
+      ] },
+    { place: '難波八阪神社',
+      route: [{ from: '飯店', to: '難波八阪神社', tags: ['g:南海高野線'], note: '今宮戎 → 南海難波', cost: 180 }] },
+    { place: '道頓堀', note: '午餐就吃小吃？', kind: 'eat',
+      route: [{ from: '難波八阪神社', to: '道頓堀', tags: ['b:堺筋線'], note: '惠美須町 → 日本橋', cost: 190 }] },
+    { place: '心齋橋', route: [{ from: '道頓堀', to: '心齋橋', tags: [WALK] }] },
+    { place: '晚餐', note: '大阪燒？拉麵？', kind: 'eat',
+      route: [{ from: '心齋橋', to: '晚餐', tags: [WALK] }] },
+    { place: '光之饗宴' },
+    { place: '飯店' },
+  ]},
+
+  /* ---------- Day 2 ---------- */
+  { date: '1/16', weekday: '六', title: '環球影城', stops: [
+    { place: '飯店' },
+    { place: '環球影城', note: '看他幾點開',
+      route: [
+        { from: '飯店',   to: '西九條',   tags: ['p:JR 環狀線'], note: '新今宮 → 西九條' },
+        { from: '西九條', to: '環球影城', tags: ['b:JR 夢咲線'], note: '西九條 → 環球城', cost: 200 },
+      ] },
+    { place: '空庭溫泉', note: '有可能會太累，太累就直接回飯店 🤣 ・ NT$415',
+      route: [
+        { from: '環球影城', to: '西九條', tags: ['b:JR 夢咲線'], note: '環球城 → 西九條' },
+        { from: '西九條',   to: '弁天町', tags: ['p:JR 環狀線'] },
+      ] },
+    { place: '飯店',
+      route: [{ from: '弁天町', to: '飯店', tags: ['p:JR 環狀線'], note: '弁天町 → 新今宮', cost: 200 }] },
+  ]},
+
+  /* ---------- Day 3 ---------- */
+  { date: '1/17', weekday: '日', title: '京都', stops: [
+    { time: '07:00', place: '飯店' },
+    { time: '09:00', place: '麗和服 清水店', note: '京都着物レンタル麗 ・ ¥55,000', status: '已訂',
+      route: [
+        { from: '飯店',       to: '北濱（大阪）', tags: ['b:堺筋線'], note: '惠美須町 → 北濱', cost: 240 },
+        { time: '07:24', from: '北濱', to: '七條', tags: ['g:京阪本線'], note: '下一班 07:36', cost: 490 },
+        { time: '08:23', from: '七條京阪前', to: '五條坂（清水道）', tags: ['p:206 CityBus'], note: '下一班 08:38', cost: 230 },
+      ] },
+    { place: '二年三年坂' },
+    { place: '清水寺' },
+    { place: '麗和服' },
+    { place: '午餐', kind: 'eat' },
+    { place: '伏見稻荷大社',
+      route: [
+        { from: '清水道',     to: '七條京阪前',   tags: ['p:206 CityBus'], cost: 230 },
+        { from: '七條',       to: '伏見稻荷',     tags: ['g:京阪本線'],    cost: 180 },
+      ] },
+    { place: '祇園、鴨川', note: '晚餐 ・ 休息一下再回大阪', kind: 'eat',
+      route: [{ from: '伏見稻荷', to: '祇園四條', tags: ['g:京阪本線'], cost: 240 }] },
+    { place: '飯店',
+      route: [
+        { from: '祇園四條', to: '北濱（大阪）', tags: ['g:京阪本線'], cost: 490 },
+        { from: '北濱',     to: '飯店',         tags: ['b:堺筋線'],   cost: 240 },
+      ] },
+  ]},
+
+  /* ---------- Day 4 ---------- */
+  { date: '1/18', weekday: '一', title: '奈良', stops: [
+    { place: '飯店', note: '可以睡晚一點~' },
+    { place: '興福寺',
+      route: [
+        { from: '飯店',     to: '日本橋',   tags: ['b:堺筋線'],    cost: 190 },
+        { from: '近鐵日本橋', to: '近鐵奈良', tags: ['y:近鐵奈良線'], cost: 680 },
+      ] },
+    { place: '奈良公園' },
+    { place: '志津香釜飯', note: '會排隊，11 點開門可以先去排', kind: 'eat' },
+    { place: '東大寺' },
+    { place: '春日大社' },
+    { place: '東向商店街', note: '晚餐，或者回大阪再吃', kind: 'eat' },
+    { place: '飯店',
+      route: [
+        { from: '近鐵奈良', to: '近鐵日本橋', tags: ['y:近鐵奈良線'], cost: 680 },
+        { from: '日本橋',   to: '飯店',       tags: ['b:堺筋線'],    cost: 190 },
+      ] },
+  ]},
+
+  /* ---------- Day 5 ---------- */
+  { date: '1/19', weekday: '二', title: '海遊館・大阪城', stops: [
+    { place: '飯店' },
+    { time: '07:00', place: '木津市場', note: '太晚去會沒東西，吃完回去放草莓（？🤣）', kind: 'eat',
+      route: [{ from: '飯店', to: '木津市場', tags: [WALK] }] },
+    { time: '09:00', place: '飯店',
+      route: [{ from: '木津市場', to: '飯店', tags: [WALK] }] },
+    { time: '09:30', place: '海遊館', note: '10:00 才開 ・ NT$555', status: '還沒',
+      route: [
+        { from: '飯店',     to: '堺筋本町', tags: ['b:堺筋線'], note: '惠美須町 → 堺筋本町' },
+        { from: '堺筋本町', to: '大阪港',   tags: ['g:中央線'], cost: 290 },
+      ] },
+    { time: '13:30', place: '浪花美食街 神保橫丁', note: '肚子餓的話', kind: 'eat' },
+    { time: '14:30', place: '天保山大摩天輪', note: 'NT$199 ・ 餵食秀時間（有附連結）' },
+    { time: '15:40', place: '大阪城', note: '¥1,200',
+      route: [{ from: '大阪港', to: '谷町四丁目', tags: ['g:中央線'], note: '本町轉乘', cost: 290 }] },
+    { place: '晚餐', note: '印度料理？', kind: 'eat' },
+    { place: 'Harukas 300 展望台', note: '看夜景（大概五點左右日落）' },
+  ]},
+
+  /* ---------- Day 6 ---------- */
+  { date: '1/20', weekday: '三', title: '天神橋・回家', stops: [
+    { place: '飯店' },
+    { place: '大阪生活今昔館', note: '¥600',
+      route: [{ from: '飯店', to: '天神橋筋六丁目', tags: ['b:堺筋線'], note: '惠美須町 → 天神橋筋六丁目', cost: 240 }] },
+    { place: '天神橋筋商店街' },
+    { place: '梅田',
+      route: [{ from: '天神橋筋商店街', to: '梅田', tags: ['p:谷町線'], note: '南森町 → 東梅田', cost: 190 }] },
+    { place: 'ササヤ書店', note: '我要買譜嘿嘿' },
+    { place: '飯店', note: '回去拿行李',
+      route: [{ from: '梅田', to: '飯店', tags: ['p:御堂筋線'], note: '梅田 → 大國町', cost: 240 }] },
+    { time: '17:12', place: '關西國際機場', kind: 'air',
+      route: [
+        { time: '16:10', from: '飯店',   to: '新今宮站', tags: [WALK, 'g:南海高野線'], note: '還要買票，早點出發', cost: 180 },
+        { time: '16:37', from: '新今宮站', to: '關西機場', tags: ['y:南海 Rapi:t'], status: '還沒', note: '17:12 抵達', cost: 1380 },
+      ] },
+    { time: '22:55', place: '小港機場', kind: 'air',
+      route: [{ time: '20:20', from: '關西機場', to: '小港機場', tags: ['b:✈️ 飛機'], status: '已訂', note: '22:55 抵達' }] },
+  ]},
+];
+
+
+/* ---------- A2. 出發前待辦 ---------- */
+const TODO = [
+  '訂海遊館門票（1/19）',
+  '查環球影城開園時間',
+  '換日幣',
+  '機場機台買 Rapi:t 與 ICOCA',
+];
+
+
+/* ---------- A3. 行李清單（分組，可自己增減） ---------- */
+const LUGGAGE = [
+  { group: '證件與錢', items: ['護照', '機票 / 電子登機證', '日幣現金', '信用卡', '住宿與預約確認截圖'] },
+  { group: '3C',       items: ['手機與充電線', '行動電源', '網路（eSIM / SIM 卡）', '耳機', '電源轉接頭（如需要）'] },
+  { group: '衣物',     items: ['保暖外套', '發熱衣褲', '好走的鞋（每天走很多路）', '襪子與內衣褲', '圍巾、手套、帽子'] },
+  { group: '盥洗與藥品', items: ['牙刷牙膏', '保養品、護唇膏', '個人藥品', '口罩'] },
+  { group: '其他',     items: ['折疊購物袋', '小包包', '雨傘'] },
+];
+
+
+/* ---------- A4. 美食 ----------
+   先留空，自己加。area 要跟 AREAS 裡的名稱一樣。
+   範例：
+   { area: '難波・心齋橋', name: '店名', type: '大阪燒', note: '備註', url: 'https://maps.app.goo.gl/...' },
+*/
+const AREAS = ['全部區域', '難波・心齋橋', '京都', '奈良', '大阪港', '梅田・天神橋'];
+
+const FOODS = [
+];
+
+
+/* ==================================================
+   B. 小工具
+   ================================================== */
+const $ = selector => document.querySelector(selector);
+
+/* 避免文字裡的特殊符號破壞 HTML */
+function esc(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+  return String(text).replace(/[&<>"]/g, c => map[c]);
+}
+
+/* localStorage 包一層，無痕模式或被封鎖時也不會壞掉 */
+const store = {
+  get(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  },
+};
+
+
+/* ==================================================
+   C. 倒數（台灣時間 2027-01-15 03:00 出發）
+   ================================================== */
+const DEPART = new Date('2027-01-15T03:00:00+08:00');
+const TRIP_END = new Date('2027-01-20T23:00:00+08:00');
+
+function updateCountdown() {
+  const ms = DEPART - Date.now();
+
+  if (ms <= 0) {
+    $('#cd').textContent = Date.now() < TRIP_END ? '旅程進行中' : '旅程結束';
+    $('#cd2').textContent = '';
+    return;
+  }
+
+  const days    = Math.floor(ms / 864e5);
+  const hours   = Math.floor(ms / 36e5) % 24;
+  const minutes = Math.floor(ms / 6e4) % 60;
+  $('#cd').textContent  = days + ' 天';
+  $('#cd2').textContent = hours + ' 小時 ' + minutes + ' 分鐘';
+}
+
+updateCountdown();
+setInterval(updateCountdown, 30000);
+
+
+/* ==================================================
+   D. 每日行程：日期切換＋時間軸
+   ================================================== */
+
+/* 一個景點 → 一張小卡（<li> 裡面一個 .sc） */
+function renderStop(stop) {
+  const { time = '', place, note = '', status = '', kind = '' } = stop;
+
+  const statusChip = status
+    ? `<span class="chip ${status === '已訂' ? 'c-g' : 'c-p'}">${status}</span>`
+    : '';
+
+  /* 備註用「・」分段：金額變小標籤，其他維持小字一行一行 */
+  const parts  = note ? note.split(/\s*・\s*/) : [];
+  const isCost = t => /^(¥|NT\$)[\d,]+$/.test(t);
+  const lines  = parts.filter(t => !isCost(t)).map(t => `<p class="sub">${esc(t)}</p>`).join('');
+  const costs  = parts.filter(isCost).map(t => `<span class="chip c-w">${esc(t)}</span>`).join('');
+
+  return `
+    <li class="${kind}">
+      <div class="sc">
+        <div class="flex flex-wrap items-center gap-x-2">
+          ${time ? `<b class="text-sm opacity-60">${esc(time)}</b>` : ''}
+          <span class="text-lg leading-snug">${esc(place)}</span> ${statusChip}
+        </div>
+        ${lines}
+        ${costs ? `<div class="flex flex-wrap gap-1.5 mt-1">${costs}</div>` : ''}
+      </div>
+    </li>`;
+}
+
+/* ---------- 路線（景點之間的交通） ---------- */
+const yen = n => '¥' + n.toLocaleString('en-US');
+
+/* 標籤文字去掉前面的 emoji，例如 '🐾 步行' → '步行' */
+const tagText = t => t.slice(2).replace(/^[^\p{L}\p{N}]+/u, '');
+
+/* 展開後的一段：時間、起訖站、標籤、費用 */
+function renderStep(s) {
+  const { time = '', from = '', to = '', note = '', tags = [], status = '', cost = 0 } = s;
+
+  const chips =
+    tags.map(t => `<span class="chip c-${t[0]}">${esc(t.slice(2))}</span>`).join('') +
+    (status ? `<span class="chip ${status === '已訂' ? 'c-g' : 'c-p'}">${status}</span>` : '') +
+    (cost   ? `<span class="chip c-w">${yen(cost)}</span>` : '');
+
+  return `
+    <div class="st">
+      <div class="flex flex-wrap items-center gap-x-2 text-sm">
+        ${time ? `<b>${esc(time)}</b>` : ''}<span>${esc(from)} → ${esc(to)}</span>
+      </div>
+      ${note ? `<p class="text-xs opacity-80">${esc(note)}</p>` : ''}
+      ${chips ? `<div class="flex flex-wrap gap-1.5 mt-1">${chips}</div>` : ''}
+    </div>`;
+}
+
+/* 虛線上的圖示：飛機 / 汽車 / 純步行 / 其他一律電車 */
+function routeIcon(steps) {
+  const all = steps.flatMap(s => s.tags || []).join(' ');
+  if (all.includes('✈')) return '✈️';
+  if (all.includes('🚗')) return '🚗';
+  const onlyWalk = steps.every(s => (s.tags || []).every(t => t.includes('🐾')));
+  return onlyWalk ? '🐾' : '🚆';
+}
+
+/* 收合時顯示的路線名稱（有搭車就不顯示步行，最多三個） */
+function routeNames(steps) {
+  const all  = [...new Set(steps.flatMap(s => s.tags || []))];
+  const ride = all.filter(t => !t.includes('🐾'));
+  const list = (ride.length ? ride : all).map(tagText);
+  return list.length > 3 ? list.slice(0, 3).join(' → ') + '…' : list.join(' → ');
+}
+
+/* 一條路線 → 一個 <li class="route">（按鈕＋展開內容） */
+function renderRoute(steps, id) {
+  const total    = steps.reduce((sum, s) => sum + (s.cost || 0), 0);
+  const statuses = [...new Set(steps.map(s => s.status).filter(Boolean))];
+  const statusBadges =
+    statuses.map(st => `<span class="chip ${st === '已訂' ? 'c-g' : 'c-p'}">${st}</span>`).join('');
+
+  const head = `
+    <div class="flex items-center justify-between gap-2 pb-2 mb-1 border-b-2 border-dotted" style="border-color: rgba(62,58,57,.4)">
+      <span class="text-sm">${esc(routeNames(steps))}</span>
+      ${total ? `<span class="chip c-w">共 ${yen(total)}</span>` : ''}
+    </div>`;
+
+  return `
+    <li class="route">
+      <button type="button" class="rt" aria-expanded="false" aria-controls="${id}">
+        <span class="rt-mid">
+          <span>${esc(routeNames(steps))}</span>
+          ${statusBadges}
+          <span class="rt-chev" aria-hidden="true">▾</span>
+        </span>
+      </button>
+      <div class="rt-body" id="${id}">
+        <div class="rt-in"><div class="rt-card">${head}${steps.map(renderStep).join('')}</div></div>
+      </div>
+    </li>`;
+}
+
+/* 顯示第 i 天 */
+function showDay(i, animate) {
+  const day = DAYS[i];
+
+  document.querySelectorAll('.day').forEach((btn, j) => {
+    btn.classList.toggle('on', j === i);
+    btn.setAttribute('aria-selected', j === i);
+  });
+
+  let routeCount = 0;
+  const items = day.stops.map(stop =>
+    (stop.route ? renderRoute(stop.route, `rt-${i}-${routeCount++}`) : '') + renderStop(stop)
+  ).join('');
+
+  $('#panel').innerHTML = `
+    <div class="flex items-baseline gap-2 mb-4">
+      <span class="chip c-y">Day ${i + 1}</span>
+      <h3 class="text-xl">${day.title}</h3>
+      ${routeCount ? '<button type="button" id="rtAll" class="chip c-w ml-auto">展開全部路線</button>' : ''}
+    </div>
+    <ol class="tl">${items}</ol>`;
+
+  if (animate) {                       // 重新觸發彈跳動畫
+    const panel = $('#panel');
+    panel.classList.remove('go');
+    void panel.offsetWidth;
+    panel.classList.add('go');
+  }
+
+  store.set('day', i);
+}
+
+/* 路線展開 / 收合 */
+function setRoute(li, open) {
+  li.classList.toggle('open', open);
+  li.querySelector('.rt').setAttribute('aria-expanded', open);
+}
+
+function syncRtAll() {
+  const btn = $('#rtAll');
+  if (!btn) return;
+  const routes = [...document.querySelectorAll('#panel .route')];
+  btn.textContent = routes.every(r => r.classList.contains('open')) ? '收合全部路線' : '展開全部路線';
+}
+
+$('#panel').addEventListener('click', e => {
+  const one = e.target.closest('.rt');
+  if (one) {
+    const li = one.closest('.route');
+    setRoute(li, !li.classList.contains('open'));
+    syncRtAll();
+    return;
+  }
+  if (e.target.closest('#rtAll')) {
+    const routes  = [...document.querySelectorAll('#panel .route')];
+    const openAll = !routes.every(r => r.classList.contains('open'));
+    routes.forEach(r => setRoute(r, openAll));
+    syncRtAll();
+  }
+});
+
+/* 日期按鈕 */
+$('#days').innerHTML = DAYS
+  .map((d, i) => `<button class="day" role="tab" data-i="${i}"><small>${d.date}</small>${d.weekday}</button>`)
+  .join('');
+
+$('#days').addEventListener('click', e => {
+  const btn = e.target.closest('.day');
+  if (!btn) return;
+  showDay(Number(btn.dataset.i), true);
+  btn.scrollIntoView({ inline: 'center', block: 'nearest' });
+});
+
+showDay(Math.min(store.get('day') || 0, DAYS.length - 1), false);
+
+
+/* ==================================================
+   E. 勾選清單（待辦＆行李共用）
+   ================================================== */
+
+/* 一個勾選項目 → <li>。key 是 localStorage 存的名字 */
+function checkItem(text, checked, data) {
+  return `
+    <li>
+      <label class="flex items-center gap-3">
+        <input type="checkbox" class="tick" ${data} ${checked ? 'checked' : ''}>
+        <span>${esc(text)}</span>
+      </label>
+    </li>`;
+}
+
+/* ---------- 待辦 ---------- */
+const todoDone = store.get('todo') || {};
+
+$('#todos').innerHTML = TODO
+  .map((text, i) => checkItem(text, todoDone[text], `data-t="${i}"`))
+  .join('');
+
+$('#todos').addEventListener('change', e => {
+  todoDone[TODO[e.target.dataset.t]] = e.target.checked;   // 用文字當 key，之後調整順序也不會亂
+  store.set('todo', todoDone);
+});
+
+/* ---------- 行李 ---------- */
+const bagDone = store.get('bag') || {};
+const bagTotal = LUGGAGE.reduce((sum, g) => sum + g.items.length, 0);
+
+$('#bagList').innerHTML = LUGGAGE.map(g => `
+  <div>
+    <h3 class="mb-2"><span class="chip c-b">${g.group}</span></h3>
+    <ul class="grid gap-3">
+      ${g.items.map(item => checkItem(item, bagDone[item], `data-b="${esc(item)}"`)).join('')}
+    </ul>
+  </div>`).join('');
+
+function updateBagProgress() {
+  const packed = Object.values(bagDone).filter(Boolean).length;
+  $('#bagProgress').textContent = `已收好 ${Math.min(packed, bagTotal)} / ${bagTotal}`;
+}
+
+$('#bagList').addEventListener('change', e => {
+  bagDone[e.target.dataset.b] = e.target.checked;
+  store.set('bag', bagDone);
+  updateBagProgress();
+});
+
+updateBagProgress();
+
+
+/* ==================================================
+   F. 美食
+   ================================================== */
+const FOOD_BG = ['#F2A497', '#F6D27A', '#A8D3E6', '#B9DAA5'];
+
+function renderFoods() {
+  const area = $('#area').value;
+  const list = FOODS.filter(f => area === AREAS[0] || f.area === area);
+
+  if (!list.length) {
+    $('#foodList').innerHTML =
+      '<p class="box p-4 text-center text-sm">這個區域還沒有店家，到程式碼的 FOODS 新增。</p>';
+    return;
+  }
+
+  $('#foodList').innerHTML = list.map((f, i) => `
+    <article class="box p-4" style="background: ${FOOD_BG[i % 4]}33">
+      <h3 class="text-lg">${esc(f.name)}</h3>
+      <span class="chip c-w">${esc(f.type || '')}</span>
+      <p class="text-sm mt-2">${esc(f.note || '')}</p>
+      ${f.url ? `<a class="chip c-y mt-2" href="${esc(f.url)}" target="_blank" rel="noopener">地圖</a>` : ''}
+    </article>`).join('');
+}
+
+$('#area').innerHTML = AREAS.map(a => `<option>${a}</option>`).join('');
+$('#area').addEventListener('change', renderFoods);
+renderFoods();
+
+
+/* ==================================================
+   ============ PWA：body 區塊（註冊 Service Worker） ============
+   ================================================== */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
